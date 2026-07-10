@@ -1,0 +1,65 @@
+###############################################################################
+# MediaMTX configuration for Atlas live video (Avisafe)
+#
+# Flow:
+#   Atlas GStreamer --rtmps://atlas-video.fly.dev/<serial>?key=APIKEY-->  (Fly TLS)
+#                   --rtmp:// (plaintext) --> this server :1935
+#   Browser --WHEP (https :443 -> :8889) + ?token=<jwt>--> WebRTC over TCP
+#
+# Auth is delegated to the Supabase edge function `atlas-video-auth`, which is
+# called for every publish (validates the Atlas API key) and every read
+# (validates a short-lived HMAC token issued by `atlas-video-access`).
+###############################################################################
+
+logLevel: info
+logDestinations: [stdout]
+
+# ---------------------------------------------------------------------------
+# Authentication — external HTTP hook
+# ---------------------------------------------------------------------------
+# MediaMTX POSTs a JSON body { action, path, query, ip, protocol, ... } to this
+# URL. 2xx = allowed, non-2xx = denied. `path` is the serial, `query` carries
+# the Atlas API key (publish) or the playback token (read).
+authMethod: http
+authHTTPAddress: https://wazxzyygflomhyoomxcc.functions.supabase.co/atlas-video-auth
+# Only actions we actually use go through the hook; internal API stays local.
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+# ---------------------------------------------------------------------------
+# Disable protocols we do not use
+# ---------------------------------------------------------------------------
+rtsp: no
+srt: no
+hls: no
+
+# ---------------------------------------------------------------------------
+# RTMP ingest (plaintext; TLS is terminated by Fly.io in fly.toml)
+# ---------------------------------------------------------------------------
+rtmp: yes
+rtmpAddress: :1935
+rtmpEncryption: "no"
+
+# ---------------------------------------------------------------------------
+# WebRTC / WHEP egress — v1 is TCP-only (Fly-friendly, no UDP hole punching)
+# ---------------------------------------------------------------------------
+webrtc: yes
+# WHEP signaling (HTTP). Fly terminates TLS on :443 and forwards to :8889.
+webrtcAddress: :8889
+webrtcEncryption: "no"
+# Force ICE over TCP: empty UDP address disables UDP, TCP mux on :8189.
+webrtcLocalUDPAddress: ""
+webrtcLocalTCPAddress: :8189
+# Do not gather local interface IPs (Fly private net); advertise the public host.
+webrtcIPsFromInterfaces: no
+webrtcAdditionalHosts: [atlas-video.fly.dev]
+webrtcHandshakeTimeout: 10s
+webrtcTrackGatherTimeout: 4s
+
+# ---------------------------------------------------------------------------
+# Dynamic paths: one per drone serial, created on demand.
+# ---------------------------------------------------------------------------
+paths:
+  all_others:
