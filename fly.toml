@@ -1,17 +1,25 @@
-# Fly.io service definition for the Atlas live-video MediaMTX server.
+# Fly.io service definition for the AviSafe live-video MediaMTX server.
 #
-# One machine only in v1 (min_machines_running = 1, auto_stop off) so the
-# publisher (Atlas) and the viewer (Avisafe browser) always hit the same
-# media server.
+# One machine only in v1 so the publisher and viewer always connect to
+# the same MediaMTX instance.
 #
-# Deploy manually from this directory:  fly deploy
+# Deploy manually from this directory:
+#   fly deploy
+
 app = "live-video"
 primary_region = "ams"
 
 [build]
 
-# --- WHEP signaling (HTTP) : external :443/:80  ->  internal :8889 ----------
-# Fly terminates TLS; MediaMTX serves plain HTTP WHEP on :8889.
+# ---------------------------------------------------------------------------
+# WHEP signaling
+#
+# External:
+#   https://live-video.fly.dev
+#
+# Internal:
+#   MediaMTX WebRTC/WHEP HTTP server on port 8889
+# ---------------------------------------------------------------------------
 [[services]]
   protocol = "tcp"
   internal_port = 8889
@@ -20,16 +28,22 @@ primary_region = "ams"
   min_machines_running = 1
 
   [[services.ports]]
-    port = 80
+    port = 443
     handlers = ["tls", "http"]
-    force_https = true
 
   [[services.ports]]
     port = 80
     handlers = ["http"]
+    force_https = true
 
-# --- RTMPS ingest : external :1936 (TLS)  ->  internal :1935 (plaintext) ----
-# Fly terminates TLS and forwards raw RTMP to MediaMTX.
+# ---------------------------------------------------------------------------
+# RTMPS ingest
+#
+# External:
+#   rtmps://live-video.fly.dev:1936/<serial>?key=<API_KEY>
+#
+# Fly terminates TLS and forwards plaintext RTMP to MediaMTX on port 1935.
+# ---------------------------------------------------------------------------
 [[services]]
   protocol = "tcp"
   internal_port = 1935
@@ -41,8 +55,11 @@ primary_region = "ams"
     port = 1936
     handlers = ["tls"]
 
-# --- WebRTC ICE over TCP : external :8189  ->  internal :8189 (raw) ---------
-# Raw TCP passthrough — ICE/DTLS handles its own encryption, no TLS handler.
+# ---------------------------------------------------------------------------
+# WebRTC ICE over TCP
+#
+# Raw TCP passthrough. WebRTC/DTLS handles encryption itself.
+# ---------------------------------------------------------------------------
 [[services]]
   protocol = "tcp"
   internal_port = 8189
