@@ -1,15 +1,25 @@
 logLevel: info
 logDestinations: [stdout]
 
-# Authentication through Supabase Edge Function
-authMethod: http
-authHTTPAddress: https://wazxzyygflomhyoomxcc.functions.supabase.co/atlas-video-auth
-authHTTPExclude:
-  - action: api
-  - action: metrics
-  - action: pprof
+# ---------------------------------------------------------------------------
+# TEMPORARY TEST AUTH
+#
+# External Supabase auth is temporarily disabled.
+# Anyone can publish/read during this short diagnostic test.
+# Restore authMethod: http immediately after testing.
+# ---------------------------------------------------------------------------
+authMethod: internal
 
+authInternalUsers:
+  - user: any
+    pass:
+    permissions:
+      - action: publish
+      - action: read
+
+# ---------------------------------------------------------------------------
 # Disable unused services
+# ---------------------------------------------------------------------------
 rtsp: false
 hls: false
 srt: false
@@ -19,15 +29,23 @@ metrics: false
 pprof: false
 playback: false
 
+# ---------------------------------------------------------------------------
 # RTMP ingest
+#
+# Fly.io terminates RTMPS on external port 1936 and forwards plaintext
+# RTMP to MediaMTX on internal port 1935.
+# ---------------------------------------------------------------------------
 rtmp: true
 rtmpEncryption: "no"
 rtmpAddress: :1935
 
+# ---------------------------------------------------------------------------
 # WebRTC / WHEP
+# ---------------------------------------------------------------------------
 webrtc: true
 webrtcAddress: :8889
 webrtcEncryption: false
+
 webrtcAllowOrigins:
   - "https://app.avisafe.no"
   - "https://mil.avisafe.no"
@@ -36,12 +54,15 @@ webrtcAllowOrigins:
 webrtcLocalUDPAddress: ""
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: false
+
 webrtcAdditionalHosts:
   - live-video.fly.dev
 
 webrtcHandshakeTimeout: 10s
 webrtcTrackGatherTimeout: 4s
 
-# Dynamic stream paths
+# ---------------------------------------------------------------------------
+# Dynamic paths — one stream per drone serial
+# ---------------------------------------------------------------------------
 paths:
   all_others:
