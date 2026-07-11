@@ -2,20 +2,17 @@ logLevel: info
 logDestinations: [stdout]
 
 # ---------------------------------------------------------------------------
-# TEMPORARY TEST AUTH
+# Authentication through Supabase Edge Function
 #
-# External Supabase auth is temporarily disabled.
-# Anyone can publish/read during this short diagnostic test.
-# Restore authMethod: http immediately after testing.
+# MediaMTX calls atlas-video-auth for every publish and read request.
 # ---------------------------------------------------------------------------
-authMethod: internal
+authMethod: http
+authHTTPAddress: https://wazxzyygflomhyoomxcc.functions.supabase.co/atlas-video-auth
 
-authInternalUsers:
-  - user: any
-    pass:
-    permissions:
-      - action: publish
-      - action: read
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
 
 # ---------------------------------------------------------------------------
 # Disable unused services
@@ -41,6 +38,9 @@ rtmpAddress: :1935
 
 # ---------------------------------------------------------------------------
 # WebRTC / WHEP
+#
+# Fly.io terminates HTTPS on port 443 and forwards WHEP signaling
+# to MediaMTX on internal port 8889.
 # ---------------------------------------------------------------------------
 webrtc: true
 webrtcAddress: :8889
@@ -50,7 +50,9 @@ webrtcAllowOrigins:
   - "https://app.avisafe.no"
   - "https://mil.avisafe.no"
 
-# TCP-only ICE
+# ---------------------------------------------------------------------------
+# WebRTC ICE over TCP
+# ---------------------------------------------------------------------------
 webrtcLocalUDPAddress: ""
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: false
