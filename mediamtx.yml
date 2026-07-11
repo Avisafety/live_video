@@ -58,7 +58,7 @@ webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: false
 
 webrtcAdditionalHosts:
-  - live-video.fly.dev
+  - 213.188.192.253
 
 webrtcHandshakeTimeout: 10s
 webrtcTrackGatherTimeout: 4s
