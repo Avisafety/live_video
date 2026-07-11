@@ -1,10 +1,17 @@
-# MediaMTX media server for Atlas live video.
-# Ingests RTMP (TLS terminated by Fly.io) and republishes as WebRTC/WHEP.
-# No transcoding — H.264 is copied straight through, so the ffmpeg-less
-# image is enough and keeps the container tiny.
-FROM bluenviron/mediamtx:latest
+# MediaMTX binary source.
+# Pin the version so future releases do not unexpectedly change behavior.
+FROM bluenviron/mediamtx:1.19.2 AS mediamtx
 
-# Our configuration (auth hook, RTMP + WebRTC/TCP-only, dynamic paths).
+# Small runtime image with a trusted CA certificate bundle.
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates \
+    && update-ca-certificates
+
+# Copy the MediaMTX binary from the official image.
+COPY --from=mediamtx /mediamtx /mediamtx
+
+# Copy our configuration.
 COPY mediamtx.yml /mediamtx.yml
 
-# The base image entrypoint is /mediamtx which reads /mediamtx.yml by default.
+ENTRYPOINT ["/mediamtx"]
