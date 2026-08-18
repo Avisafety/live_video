@@ -1,14 +1,33 @@
+###############################################################################
+# MediaMTX configuration for Atlas live video (Avisafe)
+#
+# Flow:
+#   Atlas GStreamer --rtmps://<host>:1936/<serial>?token=PUBLISHTOKEN--> (Fly TLS)
+#   (the URL + token come from the `atlas-video-endpoint` edge function;
+#    ?key=APIKEY is still accepted for backwards compatibility)
+#                   --rtmp:// (plaintext) --> this server :1935
+#   Browser --WHEP (https :443 -> :8889) + ?token=<jwt>--> WebRTC over TCP :8189
+#
+# Auth is delegated to the Supabase edge function `atlas-video-auth`, which is
+# called for every publish (validates the Atlas API key) and every read
+# (validates a short-lived HMAC token issued by `atlas-video-access`).
+#
+# This file must stay identical to what runs on Fly. Deploy manually:
+#   cd atlas-video && fly deploy
+###############################################################################
+
 logLevel: info
 logDestinations: [stdout]
 
 # ---------------------------------------------------------------------------
 # Authentication through Supabase Edge Function
 #
-# MediaMTX calls atlas-video-auth for every publish and read request.
+# MediaMTX POSTs { action, path, query, ip, protocol, ... } to this URL.
+# 2xx = allowed, non-2xx = denied. `path` is the drone serial, `query` carries
+# a publish token or the Atlas API key (publish), or the playback token (read).
 # ---------------------------------------------------------------------------
 authMethod: http
 authHTTPAddress: https://wazxzyygflomhyoomxcc.functions.supabase.co/atlas-video-auth
-
 authHTTPExclude:
   - action: api
   - action: metrics
@@ -45,21 +64,25 @@ rtmpAddress: :1935
 webrtc: true
 webrtcAddress: :8889
 webrtcEncryption: false
-
 webrtcAllowOrigins:
   - "https://app.avisafe.no"
   - "https://mil.avisafe.no"
+  - "https://forsvaret-avisafe.lovable.app"
+  - "https://id-preview--fde0152e-cccd-4746-95f2-eb6ab938aaa9.lovable.app"
 
 # ---------------------------------------------------------------------------
 # WebRTC ICE over TCP
+#
+# NOTE: webrtcAdditionalHosts is the hardcoded public Fly IP for the
+# `live-video` app. If the app gets a new IP (`fly ips list`), update it here
+# and redeploy — otherwise ICE candidates point at the wrong address and
+# playback fails silently after signaling succeeds.
 # ---------------------------------------------------------------------------
 webrtcLocalUDPAddress: ""
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: false
-
 webrtcAdditionalHosts:
   - 213.188.192.253
-
 webrtcHandshakeTimeout: 10s
 webrtcTrackGatherTimeout: 4s
 
