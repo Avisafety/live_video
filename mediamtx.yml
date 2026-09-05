@@ -80,6 +80,7 @@ webrtcAllowOrigins:
   - "https://mil.avisafe.no"
   - "https://forsvaret-avisafe.lovable.app"
   - "https://id-preview--fde0152e-cccd-4746-95f2-eb6ab938aaa9.lovable.app"
+  - "https://fde0152e-cccd-4746-95f2-eb6ab938aaa9.lovableproject.com"
 
 # ---------------------------------------------------------------------------
 # WebRTC ICE over TCP
