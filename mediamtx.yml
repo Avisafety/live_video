@@ -4,15 +4,15 @@
 # Flow:
 #   Atlas GStreamer --rtmps://<host>:1936/<serial>/<sensor>?token=PUBLISHTOKEN--> (Fly TLS)
 #   (<sensor>: 1 = EO, 2 = Thermal. A path without a sensor segment = EO.)
-#   (the URL + token come from the `atlas-video-endpoint` edge function;
+#   (the URL + token come from the atlas-video-endpoint edge function;
 #    ?key=APIKEY is still accepted for backwards compatibility)
 #                   --rtmp:// (plaintext) --> this server :1935
 #   Browser --WHEP (https :443 -> :8889) /<serial>/<sensor>/whep?token=<token>
 #           --> WebRTC over TCP :8189
 #
-# Auth is delegated to the Supabase edge function `atlas-video-auth`, which is
+# Auth is delegated to the Supabase edge function atlas-video-auth, which is
 # called for every publish (validates the Atlas API key) and every read
-# (validates a short-lived HMAC token issued by `atlas-video-access`).
+# (validates a short-lived HMAC token issued by atlas-video-access).
 #
 # This file must stay identical to what runs on Fly. Deploy manually:
 #   cd atlas-video && fly deploy
@@ -21,15 +21,6 @@
 logLevel: info
 logDestinations: [stdout]
 
-# ---------------------------------------------------------------------------
-# Authentication through Supabase Edge Function
-#
-# MediaMTX POSTs { action, path, query, ip, protocol, ... } to this URL.
-# 2xx = allowed, non-2xx = denied. `path` is the drone serial, `query` carries
-# a publish token or the Atlas API key (publish), or the playback token (read).
-# `path` is "<serial>" or "<serial>/<sensor>"; tokens are signed over the full
-# path, so EO and Thermal need separate tokens.
-# ---------------------------------------------------------------------------
 authMethod: http
 authHTTPAddress: https://wazxzyygflomhyoomxcc.functions.supabase.co/atlas-video-auth
 authHTTPExclude:
@@ -37,13 +28,6 @@ authHTTPExclude:
   - action: metrics
   - action: pprof
 
-# ---------------------------------------------------------------------------
-# Disable unused services
-# ---------------------------------------------------------------------------
-# RTSP is enabled for INTERNAL readers only (atlas-detector over the Fly
-# private 6PN network). Port 8554 is deliberately NOT published in fly.toml,
-# so it is unreachable from the internet. Reads are still authorised by
-# atlas-video-auth (detector uses DETECTOR_SHARED_SECRET + fdaa:: source IP).
 rtsp: true
 rtspTransports: [tcp]
 rtspEncryption: "no"
@@ -56,22 +40,10 @@ metrics: false
 pprof: false
 playback: false
 
-# ---------------------------------------------------------------------------
-# RTMP ingest
-#
-# Fly.io terminates RTMPS on external port 1936 and forwards plaintext
-# RTMP to MediaMTX on internal port 1935.
-# ---------------------------------------------------------------------------
 rtmp: true
 rtmpEncryption: "no"
 rtmpAddress: :1935
 
-# ---------------------------------------------------------------------------
-# WebRTC / WHEP
-#
-# Fly.io terminates HTTPS on port 443 and forwards WHEP signaling
-# to MediaMTX on internal port 8889.
-# ---------------------------------------------------------------------------
 webrtc: true
 webrtcAddress: :8889
 webrtcEncryption: false
@@ -82,15 +54,7 @@ webrtcAllowOrigins:
   - "https://id-preview--fde0152e-cccd-4746-95f2-eb6ab938aaa9.lovable.app"
   - "https://fde0152e-cccd-4746-95f2-eb6ab938aaa9.lovableproject.com"
 
-# ---------------------------------------------------------------------------
-# WebRTC ICE over TCP
-#
-# NOTE: webrtcAdditionalHosts is the hardcoded public Fly IP for the
-# `live-video` app. If the app gets a new IP (`fly ips list`), update it here
-# and redeploy — otherwise ICE candidates point at the wrong address and
-# playback fails silently after signaling succeeds.
-# ---------------------------------------------------------------------------
-webrtcLocalUDPAddress: ""
+webrtcLocalUDPAddress: :8189
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: false
 webrtcAdditionalHosts:
@@ -98,8 +62,5 @@ webrtcAdditionalHosts:
 webrtcHandshakeTimeout: 10s
 webrtcTrackGatherTimeout: 4s
 
-# ---------------------------------------------------------------------------
-# Dynamic paths — one stream per drone serial and sensor (<serial>/<sensor>)
-# ---------------------------------------------------------------------------
 paths:
   all_others:

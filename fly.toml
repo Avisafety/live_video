@@ -11,15 +11,6 @@ primary_region = "ams"
 
 [build]
 
-# ---------------------------------------------------------------------------
-# WHEP signaling
-#
-# External:
-#   https://live-video.fly.dev
-#
-# Internal:
-#   MediaMTX WebRTC/WHEP HTTP server on port 8889
-# ---------------------------------------------------------------------------
 [[services]]
   protocol = "tcp"
   internal_port = 8889
@@ -36,14 +27,6 @@ primary_region = "ams"
     handlers = ["http"]
     force_https = true
 
-# ---------------------------------------------------------------------------
-# RTMPS ingest
-#
-# External:
-#   rtmps://live-video.fly.dev:1936/<serial>?key=<API_KEY>
-#
-# Fly terminates TLS and forwards plaintext RTMP to MediaMTX on port 1935.
-# ---------------------------------------------------------------------------
 [[services]]
   protocol = "tcp"
   internal_port = 1935
@@ -55,13 +38,18 @@ primary_region = "ams"
     port = 1936
     handlers = ["tls"]
 
-# ---------------------------------------------------------------------------
-# WebRTC ICE over TCP
-#
-# Raw TCP passthrough. WebRTC/DTLS handles encryption itself.
-# ---------------------------------------------------------------------------
 [[services]]
   protocol = "tcp"
+  internal_port = 8189
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 8189
+
+[[services]]
+  protocol = "udp"
   internal_port = 8189
   auto_stop_machines = "off"
   auto_start_machines = true
