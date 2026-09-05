@@ -2,11 +2,13 @@
 # MediaMTX configuration for Atlas live video (Avisafe)
 #
 # Flow:
-#   Atlas GStreamer --rtmps://<host>:1936/<serial>?token=PUBLISHTOKEN--> (Fly TLS)
+#   Atlas GStreamer --rtmps://<host>:1936/<serial>/<sensor>?token=PUBLISHTOKEN--> (Fly TLS)
+#   (<sensor>: 1 = EO, 2 = Thermal. A path without a sensor segment = EO.)
 #   (the URL + token come from the `atlas-video-endpoint` edge function;
 #    ?key=APIKEY is still accepted for backwards compatibility)
 #                   --rtmp:// (plaintext) --> this server :1935
-#   Browser --WHEP (https :443 -> :8889) + ?token=<jwt>--> WebRTC over TCP :8189
+#   Browser --WHEP (https :443 -> :8889) /<serial>/<sensor>/whep?token=<token>
+#           --> WebRTC over TCP :8189
 #
 # Auth is delegated to the Supabase edge function `atlas-video-auth`, which is
 # called for every publish (validates the Atlas API key) and every read
@@ -25,6 +27,8 @@ logDestinations: [stdout]
 # MediaMTX POSTs { action, path, query, ip, protocol, ... } to this URL.
 # 2xx = allowed, non-2xx = denied. `path` is the drone serial, `query` carries
 # a publish token or the Atlas API key (publish), or the playback token (read).
+# `path` is "<serial>" or "<serial>/<sensor>"; tokens are signed over the full
+# path, so EO and Thermal need separate tokens.
 # ---------------------------------------------------------------------------
 authMethod: http
 authHTTPAddress: https://wazxzyygflomhyoomxcc.functions.supabase.co/atlas-video-auth
@@ -36,7 +40,14 @@ authHTTPExclude:
 # ---------------------------------------------------------------------------
 # Disable unused services
 # ---------------------------------------------------------------------------
-rtsp: false
+# RTSP is enabled for INTERNAL readers only (atlas-detector over the Fly
+# private 6PN network). Port 8554 is deliberately NOT published in fly.toml,
+# so it is unreachable from the internet. Reads are still authorised by
+# atlas-video-auth (detector uses DETECTOR_SHARED_SECRET + fdaa:: source IP).
+rtsp: true
+rtspTransports: [tcp]
+rtspEncryption: "no"
+rtspAddress: :8554
 hls: false
 srt: false
 moq: false
@@ -87,7 +98,7 @@ webrtcHandshakeTimeout: 10s
 webrtcTrackGatherTimeout: 4s
 
 # ---------------------------------------------------------------------------
-# Dynamic paths — one stream per drone serial
+# Dynamic paths — one stream per drone serial and sensor (<serial>/<sensor>)
 # ---------------------------------------------------------------------------
 paths:
   all_others:
