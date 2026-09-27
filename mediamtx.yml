@@ -64,3 +64,10 @@ webrtcTrackGatherTimeout: 4s
 
 paths:
   all_others:
+    # Wake the object detector. atlas-detector sleeps after 10 minutes without
+    # video; a request to its private Flycast address makes Fly start the
+    # machine. Sent when a drone starts publishing (runOnReady) and when
+    # anyone starts reading (runOnRead: a browser viewer, or the detector
+    # itself). Fire-and-forget: a failure only delays the boxes, never video.
+    runOnReady: wget -q -T 20 -O /dev/null http://atlas-detector.flycast/wake
+    runOnRead: wget -q -T 20 -O /dev/null http://atlas-detector.flycast/wake
